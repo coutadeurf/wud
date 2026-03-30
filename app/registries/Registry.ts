@@ -361,10 +361,23 @@ class Registry extends Component {
     }> {
         try {
             // Parse the image name to extract registry, repository, and tag
-            const [fullName, tag] = imageName.split(':');
-            const lastSlashIndex = fullName.lastIndexOf('/');
-            const repository = fullName.substring(lastSlashIndex + 1);
-            const registryHost = fullName.substring(0, lastSlashIndex);
+            // Handle both formats: "registry/repo:tag" and "https://registry/repo:tag"
+            let fullName = imageName;
+            if (fullName.startsWith('https://')) {
+                // Remove https:// prefix if present
+                fullName = fullName.replace('https://', '');
+            }
+            if (fullName.startsWith('http://')) {
+                // Remove http:// prefix if present
+                fullName = fullName.replace('http://', '');
+            }
+            // Remove /v2 path if present (Docker Registry API path)
+            fullName = fullName.replace('/v2/', '/');
+            
+            const [nameWithTag, tag] = fullName.split(':');
+            const lastSlashIndex = nameWithTag.lastIndexOf('/');
+            const repository = nameWithTag.substring(lastSlashIndex + 1);
+            const registryHost = nameWithTag.substring(0, lastSlashIndex);
             
             // First, get the manifest to find the config digest
             const manifestResponse = await this.callRegistry<{
