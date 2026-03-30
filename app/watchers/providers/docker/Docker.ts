@@ -826,8 +826,33 @@ class Docker extends Watcher {
             if (tagsCandidates && tagsCandidates.length > 0) {
                 [result.tag] = tagsCandidates;
             }
+            
+            // Fetch labels for rolling release containers (NEW)
+            try {
+                if (this.shouldFetchVersionLabels(container)) {
+                    const imageName = `${container.image.registry.url}/${container.image.name}:${result.tag}`;
+                    const config = await registryProvider.getImageConfigWithLabels(imageName);
+                    if (config.config?.Labels) {
+                        result.labels = config.config.Labels;
+                    }
+                }
+            } catch (error) {
+                logContainer.error(`Failed to fetch labels for ${container.image.registry.url}/${container.image.name}:${result.tag}: ${error.message}`);
+                // Don't fail the entire update check if label fetching fails
+            }
         }
         return result;
+    }
+
+    /**
+     * Check if we should fetch version labels for this container
+     * @param container Container to check
+     * @returns true if should fetch labels
+     */
+    shouldFetchVersionLabels(container: Container): boolean {
+        // Fetch labels for common rolling release tags
+        const rollingReleaseTags = ['stable', 'latest', 'release', 'dev', 'beta', 'alpha'];
+        return rollingReleaseTags.includes(container.image.tag.value.toLowerCase());
     }
 
     /**
