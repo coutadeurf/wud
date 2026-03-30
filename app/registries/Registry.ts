@@ -360,6 +360,12 @@ class Registry extends Component {
         };
     }> {
         try {
+            // Parse the image name to extract registry, repository, and tag
+            const [fullName, tag] = imageName.split(':');
+            const lastSlashIndex = fullName.lastIndexOf('/');
+            const repository = fullName.substring(lastSlashIndex + 1);
+            const registryHost = fullName.substring(0, lastSlashIndex);
+            
             // First, get the manifest to find the config digest
             const manifestResponse = await this.callRegistry<{
                 config?: {
@@ -367,11 +373,8 @@ class Registry extends Component {
                     mediaType: string;
                 };
             }>({
-                image: this.getImageFromName(imageName),
-                url: `${this.getImageFullName(
-                    this.getImageFromName(imageName),
-                    this.getTagFromName(imageName)
-                )}`,
+                image: { name: repository, registry: { name: registryHost, url: `https://${registryHost}` } } as any,
+                url: `${registryHost}/${repository}/manifests/${tag}`,
                 headers: {
                     Accept: 'application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json'
                 }
@@ -390,11 +393,8 @@ class Registry extends Component {
                     Labels: Record<string, string>;
                 };
             }>({
-                image: this.getImageFromName(imageName),
-                url: `${this.getImageFullName(
-                    this.getImageFromName(imageName),
-                    configDigest
-                )}`,
+                image: { name: repository, registry: { name: registryHost, url: `https://${registryHost}` } } as any,
+                url: `${registryHost}/${repository}/blobs/${configDigest}`,
                 headers: {
                     Accept: configMediaType
                 }
