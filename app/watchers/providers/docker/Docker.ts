@@ -830,10 +830,31 @@ class Docker extends Watcher {
             // Fetch labels for rolling release containers (NEW)
             try {
                 if (this.shouldFetchVersionLabels(container)) {
-                    const imageName = `${container.image.registry.url}/${container.image.name}:${result.tag}`;
+                    // Debug: Log container image details
+                    logContainer.debug(`Fetching labels for container: ${container.name}`);
+                    logContainer.debug(`Image registry: name=${container.image.registry.name}, url=${container.image.registry.url}`);
+                    logContainer.debug(`Image name: ${container.image.name}, tag: ${result.tag}`);
+                    
+                    // Handle cases where registry URL might be empty/missing
+                    let imageName;
+                    if (container.image.registry.url && !container.image.registry.url.startsWith('https://')) {
+                        // If URL doesn't start with https, it might be just the hostname
+                        imageName = `${container.image.registry.url}/${container.image.name}:${result.tag}`;
+                    } else if (container.image.registry.url) {
+                        // Full URL, extract hostname
+                        const url = new URL(container.image.registry.url);
+                        imageName = `${url.host}/${container.image.name}:${result.tag}`;
+                    } else {
+                        // Fallback: try with just name (for Docker Hub compatibility)
+                        imageName = `${container.image.name}:${result.tag}`;
+                    }
+                    
+                    logContainer.debug(`Constructed image name: ${imageName}`);
+                    
                     const config = await registryProvider.getImageConfigWithLabels(imageName);
                     if (config.config?.Labels) {
                         result.labels = config.config.Labels;
+                        logContainer.debug(`Successfully fetched ${Object.keys(config.config.Labels).length} labels`);
                     }
                 }
             } catch (error) {
