@@ -349,6 +349,98 @@ class Registry extends Component {
         }
     }
 
+    /**
+     * Get image config with labels from registry
+     * @param imageName Full image name with tag
+     * @returns Image config containing labels
+     */
+    async getImageConfigWithLabels(imageName: string): Promise<{
+        config: {
+            Labels: Record<string, string>;
+        };
+    }> {
+        try {
+            // First, get the manifest to find the config digest
+            const manifestResponse = await this.callRegistry<{
+                config?: {
+                    digest: string;
+                    mediaType: string;
+                };
+            }>({
+                image: this.getImageFromName(imageName),
+                url: `${this.getImageFullName(
+                    this.getImageFromName(imageName),
+                    this.getTagFromName(imageName)
+                )}`,
+                headers: {
+                    Accept: 'application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json'
+                }
+            });
+            
+            if (!manifestResponse.config?.digest) {
+                throw new Error('No config digest found in manifest');
+            }
+            
+            const configDigest = manifestResponse.config.digest;
+            const configMediaType = manifestResponse.config.mediaType;
+            
+            // Fetch the config blob containing labels
+            const configResponse = await this.callRegistry<{
+                config: {
+                    Labels: Record<string, string>;
+                };
+            }>({
+                image: this.getImageFromName(imageName),
+                url: `${this.getImageFullName(
+                    this.getImageFromName(imageName),
+                    configDigest
+                )}`,
+                headers: {
+                    Accept: configMediaType
+                }
+            });
+            
+            return configResponse;
+        } catch (error) {
+            log.error(`Failed to fetch image config for ${imageName}: ${error.message}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Helper method to extract image name from full name
+     * @param fullName Full image name with tag
+     * @returns ContainerImage object
+     */
+    getImageFromName(fullName: string): ContainerImage {
+        // Simple parsing - split by : or @ to separate name from tag/digest
+        const parts = fullName.split(/[:@]/);
+        const nameParts = parts[0].split('/');
+        
+        return {
+            id: '',
+            registry: {
+                name: nameParts.length > 1 ? nameParts[0] : 'docker.io',
+                url: `https://${nameParts.length > 1 ? nameParts[0] : 'registry-1.docker.io'}`
+            },
+            name: nameParts.length > 1 ? nameParts.slice(1).join('/') : nameParts[0],
+            tag: { value: parts[1] || 'latest', semver: false },
+            digest: { watch: false },
+            architecture: 'amd64',
+            os: 'linux'
+        };
+    }
+
+    /**
+     * Helper method to extract tag from full name
+     * @param fullName Full image name with tag
+     * @returns Tag value
+     */
+    getTagFromName(fullName: string): string {
+        const parts = fullName.split(/[:@]/);
+        return parts[1] || 'latest';
+    }
+
     observePrometheusSummaryTags(start: number) {
         const summaryTags = getSummaryTags();
         if (summaryTags) {
