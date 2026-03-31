@@ -371,8 +371,6 @@ class Registry extends Component {
                 // Remove http:// prefix if present
                 fullName = fullName.replace('http://', '');
             }
-            // Remove /v2 path if present (Docker Registry API path)
-            fullName = fullName.replace('/v2/', '/');
             
             const [nameWithTag, tag] = fullName.split(':');
             const firstSlashIndex = nameWithTag.indexOf('/');
