@@ -375,9 +375,9 @@ class Registry extends Component {
             fullName = fullName.replace('/v2/', '/');
             
             const [nameWithTag, tag] = fullName.split(':');
-            const lastSlashIndex = nameWithTag.lastIndexOf('/');
-            const repository = nameWithTag.substring(lastSlashIndex + 1);
-            const registryHost = nameWithTag.substring(0, lastSlashIndex);
+            const firstSlashIndex = nameWithTag.indexOf('/');
+            const repository = nameWithTag.substring(firstSlashIndex + 1);
+            const registryHost = nameWithTag.substring(0, firstSlashIndex);
             
             // First, get the manifest to find the config digest
             const manifestResponse = await this.callRegistry<{
