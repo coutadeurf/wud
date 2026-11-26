@@ -420,13 +420,19 @@ export default defineComponent({
         this.container.updateKind?.kind === "digest" ||
         (!this.container.result?.tag && this.container.result?.digest)
       ) {
-        const digest =
-          this.container.updateKind?.remoteValue ||
-          this.container.result?.digest ||
-          newVersion;
-        newVersion = (this as any).$filters?.short
-          ? (this as any).$filters.short(digest, 15)
-          : digest.substring(0, 15);
+        if (this.container.result?.version) {
+          // Rolling-release containers (e.g. 'stable', 'latest') expose the
+          // real upstream version of the new image; show it instead of a hash.
+          newVersion = `${this.container.image.tag.value} (${this.container.result.version})`;
+        } else {
+          const digest =
+            this.container.updateKind?.remoteValue ||
+            this.container.result?.digest ||
+            newVersion;
+          newVersion = (this as any).$filters?.short
+            ? (this as any).$filters.short(digest, 15)
+            : digest.substring(0, 15);
+        }
       }
       return newVersion;
     },

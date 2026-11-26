@@ -202,6 +202,26 @@ describe('ContainerItem', () => {
     expect(wrapper.vm.newVersion).toBe('sha256:12345678...');
   });
 
+  it('displays the real version instead of the digest for rolling-release digest updates', async () => {
+    await wrapper.setProps({
+      container: {
+        ...mockContainer,
+        image: { ...mockContainer.image, tag: { value: 'stable', semver: false } },
+        updateKind: {
+          kind: 'digest',
+          semverDiff: 'rebuild',
+          remoteValue: 'sha256:1234567890abcdef1234567890abcdef1234567890abcdef'
+        },
+        result: {
+          created: '2023-01-02T00:00:00Z',
+          tag: 'stable',
+          version: '2026.11.1'
+        }
+      }
+    });
+    expect(wrapper.vm.newVersion).toBe('stable (2026.11.1)');
+  });
+
   it('shows update button when update is available and user has write access', async () => {
     wrapper.vm.showDetail = true;
     await wrapper.vm.$nextTick();
